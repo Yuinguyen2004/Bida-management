@@ -10,6 +10,8 @@ const tableRoutes = require('./routes/table.routes');
 const fnbRoutes = require('./routes/fnb.routes');
 const orderRoutes = require('./routes/order.routes');
 const customerRoutes = require('./routes/customer.routes');
+const sessionRoutes = require('./routes/session.routes');
+const revenueRoutes = require('./routes/revenue.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +29,8 @@ app.use('/api/tables', tableRoutes);
 app.use('/api/fnb', fnbRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/revenue', revenueRoutes);
 
 // Error handler
 app.use(errorHandler);

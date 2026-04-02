@@ -26,4 +26,9 @@ const createOrder = async ({ sessionId, fnbItemId, quantity }) => {
   });
 };
 
-module.exports = { getOrdersBySessionId, createOrder };
+const getTotalFnbCost = async (sessionId) => {
+  const orders = await orderItemRepository.findBySessionId(sessionId);
+  return orders.reduce((sum, order) => sum + order.price, 0);
+};
+
+module.exports = { getOrdersBySessionId, createOrder, getTotalFnbCost };
