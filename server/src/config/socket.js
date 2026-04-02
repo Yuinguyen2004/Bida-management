@@ -1,4 +1,5 @@
 const { Server } = require('socket.io');
+const Table = require('../models/Table');
 
 let io;
 
@@ -13,6 +14,17 @@ const initSocket = (server) => {
 
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
+
+    socket.join('tables');
+
+    socket.on('table:getAll', async () => {
+      try {
+        const tables = await Table.find();
+        socket.emit('table:getAll', tables);
+      } catch (error) {
+        socket.emit('error', { message: 'Failed to fetch tables' });
+      }
+    });
 
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.id}`);

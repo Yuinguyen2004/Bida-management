@@ -1,10 +1,9 @@
-const Table = require('../models/Table');
-const ApiError = require('../utils/apiError');
+const tableService = require('../services/table.service');
 const { getIO } = require('../config/socket');
 
 exports.getAllTables = async (req, res, next) => {
   try {
-    const tables = await Table.find();
+    const tables = await tableService.getAllTables();
     res.json({ success: true, data: tables });
   } catch (error) {
     next(error);
@@ -13,46 +12,27 @@ exports.getAllTables = async (req, res, next) => {
 
 exports.getTableById = async (req, res, next) => {
   try {
-    const table = await Table.findById(req.params.id);
-    if (!table) {
-      throw new ApiError(404, 'Table not found');
-    }
+    const table = await tableService.getTableById(req.params.id);
     res.json({ success: true, data: table });
   } catch (error) {
     next(error);
   }
 };
 
-// Create table (admin only)
 exports.createTable = async (req, res, next) => {
   try {
     const { name, type, pricePerHour, position } = req.body;
-    const table = await Table.create({
-      name,
-      type,
-      pricePerHour,
-      position,
-      status: 'available',
-    });
+    const table = await tableService.createTable({ name, type, pricePerHour, position });
     res.status(201).json({ success: true, data: table });
   } catch (error) {
     next(error);
   }
 };
 
-// Update table (admin only)
 exports.updateTable = async (req, res, next) => {
   try {
-    const table = await Table.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!table) {
-      throw new ApiError(404, 'Table not found');
-    }
+    const table = await tableService.updateTable(req.params.id, req.body);
 
-    // Emit socket event if status changed
     if (req.body.status) {
       const io = getIO();
       io.to('tables').emit('table:statusChange', {
@@ -67,13 +47,9 @@ exports.updateTable = async (req, res, next) => {
   }
 };
 
-// Delete table (admin only)
 exports.deleteTable = async (req, res, next) => {
   try {
-    const table = await Table.findByIdAndDelete(req.params.id);
-    if (!table) {
-      throw new ApiError(404, 'Table not found');
-    }
+    await tableService.deleteTable(req.params.id);
     res.json({ success: true, message: 'Table deleted' });
   } catch (error) {
     next(error);
