@@ -9,6 +9,15 @@ exports.getOrdersBySession = async (req, res, next) => {
   }
 };
 
+exports.getTotalFnbCost = async (req, res, next) => {
+  try {
+    const totalFnbCost = await orderService.getTotalFnbCost(req.params.sessionId);
+    res.json({ success: true, data: { totalFnbCost } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.createOrder = async (req, res, next) => {
   try {
     const { sessionId, fnbItemId, quantity } = req.body;
