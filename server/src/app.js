@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth.routes');
 const tableRoutes = require('./routes/table.routes');
 const fnbRoutes = require('./routes/fnb.routes');
 const orderRoutes = require('./routes/order.routes');
+const customerRoutes = require('./routes/customer.routes');
 const sessionRoutes = require('./routes/session.routes');
 const revenueRoutes = require('./routes/revenue.routes');
 
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/fnb', fnbRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/customers', customerRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/revenue', revenueRoutes);
 
