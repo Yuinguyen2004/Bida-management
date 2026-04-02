@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth.routes');
 const tableRoutes = require('./routes/table.routes');
 const fnbRoutes = require('./routes/fnb.routes');
 const orderRoutes = require('./routes/order.routes');
+const revenueRoutes = require('./routes/revenue.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/fnb', fnbRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/revenue', revenueRoutes);
 
 // Error handler
 app.use(errorHandler);
