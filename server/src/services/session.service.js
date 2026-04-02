@@ -2,18 +2,19 @@ const SessionRepository = require('../repositories/SessionRepository');
 const TableRepository = require('../repositories/TableRepository');
 const OrderItemRepository = require('../repositories/OrderItemRepository');
 const ApiError = require('../utils/apiError');
+const { getIO } = require('../config/socket');
 
 const sessionRepository = new SessionRepository();
 const tableRepository = new TableRepository();
 const orderItemRepository = new OrderItemRepository();
 
-const startSession = async ({ tableId, staffId }) => {
+const startSession = async (tableId, staffId) => {
   const table = await tableRepository.findById(tableId);
   if (!table) {
-    throw new ApiError(404, 'Table not found');
+    throw new ApiError(404, 'Ban khong ton tai');
   }
   if (table.status !== 'available') {
-    throw new ApiError(400, 'Table is not available');
+    throw new ApiError(400, 'Ban dang duoc su dung hoac bao tri');
   }
 
   const session = await sessionRepository.create({
@@ -25,16 +26,19 @@ const startSession = async ({ tableId, staffId }) => {
 
   await tableRepository.update(tableId, { status: 'playing' });
 
+  const io = getIO();
+  io.to('tables').emit('table:statusChange', { tableId, status: 'playing' });
+
   return sessionRepository.findById(session._id);
 };
 
 const endSession = async (sessionId) => {
   const session = await sessionRepository.findById(sessionId);
   if (!session) {
-    throw new ApiError(404, 'Session not found');
+    throw new ApiError(404, 'Phien choi khong ton tai');
   }
   if (session.status !== 'active') {
-    throw new ApiError(400, 'Session is already completed');
+    throw new ApiError(400, 'Phien choi da ket thuc');
   }
 
   const endTime = new Date();
@@ -58,7 +62,11 @@ const endSession = async (sessionId) => {
     status: 'completed',
   });
 
-  await tableRepository.update(session.tableId._id, { status: 'available' });
+  const tableId = session.tableId._id;
+  await tableRepository.update(tableId, { status: 'available' });
+
+  const io = getIO();
+  io.to('tables').emit('table:statusChange', { tableId, status: 'available' });
 
   return updatedSession;
 };
@@ -66,7 +74,7 @@ const endSession = async (sessionId) => {
 const getSessionById = async (id) => {
   const session = await sessionRepository.findById(id);
   if (!session) {
-    throw new ApiError(404, 'Session not found');
+    throw new ApiError(404, 'Phien choi khong ton tai');
   }
 
   const orders = await orderItemRepository.findBySessionId(id);
@@ -82,13 +90,15 @@ const getSessions = async (query = {}) => {
   }
 
   if (query.date) {
-    const date = new Date(query.date);
-    const start = new Date(date.setHours(0, 0, 0, 0));
-    const end = new Date(date.setHours(23, 59, 59, 999));
+    const targetDate = new Date(query.date);
+    const start = new Date(targetDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(targetDate);
+    end.setHours(23, 59, 59, 999);
     filter.startTime = { $gte: start, $lte: end };
   }
 
-  return sessionRepository.findAll(filter);
+  return sessionRepository.findByFilter(filter);
 };
 
 module.exports = { startSession, endSession, getSessionById, getSessions };

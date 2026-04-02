@@ -19,23 +19,25 @@ const sessionSchema = new mongoose.Schema(
     },
     endTime: {
       type: Date,
-      default: null,
     },
     duration: {
       type: Number,
-      default: 0,
+      min: 0,
     },
     totalTableCost: {
       type: Number,
       default: 0,
+      min: 0,
     },
     totalFnbCost: {
       type: Number,
       default: 0,
+      min: 0,
     },
     totalAmount: {
       type: Number,
       default: 0,
+      min: 0,
     },
     status: {
       type: String,

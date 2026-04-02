@@ -5,7 +5,7 @@ class SessionRepository {
     return Session.findById(id).populate('tableId').populate('staffId', '-password');
   }
 
-  async findAll(filter = {}) {
+  async findByFilter(filter) {
     return Session.find(filter)
       .populate('tableId')
       .populate('staffId', '-password')
@@ -25,6 +25,10 @@ class SessionRepository {
       new: true,
       runValidators: true,
     }).populate('tableId').populate('staffId', '-password');
+  }
+
+  async aggregate(pipeline) {
+    return Session.aggregate(pipeline);
   }
 }
 
