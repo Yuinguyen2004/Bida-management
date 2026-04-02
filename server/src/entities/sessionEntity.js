@@ -7,6 +7,11 @@ const sessionSchema = new mongoose.Schema(
       ref: 'Table',
       required: true,
     },
+    staffId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     startTime: {
       type: Date,
       required: true,
@@ -38,11 +43,6 @@ const sessionSchema = new mongoose.Schema(
       type: String,
       enum: ['active', 'completed'],
       default: 'active',
-    },
-    staffId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
     },
   },
   { timestamps: true }

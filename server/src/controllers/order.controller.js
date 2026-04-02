@@ -5,6 +5,11 @@ exports.getOrdersBySession = async (req, res) => {
   res.json({ success: true, data: orders });
 };
 
+exports.getTotalFnbCost = async (req, res) => {
+  const totalFnbCost = await orderService.getTotalFnbCost(req.params.sessionId);
+  res.json({ success: true, data: { totalFnbCost } });
+};
+
 exports.createOrder = async (req, res) => {
   const { sessionId, fnbItemId, quantity } = req.body;
   const order = await orderService.createOrder({ sessionId, fnbItemId, quantity });

@@ -12,6 +12,10 @@ class SessionRepository {
       .sort({ createdAt: -1 });
   }
 
+  async findActiveByTableId(tableId) {
+    return Session.findOne({ tableId, status: 'active' });
+  }
+
   async create(data) {
     return Session.create(data);
   }
@@ -20,7 +24,7 @@ class SessionRepository {
     return Session.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
-    });
+    }).populate('tableId').populate('staffId', '-password');
   }
 
   async aggregate(pipeline) {
