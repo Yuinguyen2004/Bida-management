@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const UserRepository = require('../repositories/UserRepository');
 const ApiError = require('../utils/apiError');
+
+const userRepository = new UserRepository();
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -13,12 +15,12 @@ const generateTokens = (userId) => {
 };
 
 const register = async ({ username, password, fullName, role }) => {
-  const existing = await User.findOne({ username });
+  const existing = await userRepository.findByUsername(username);
   if (existing) {
     throw new ApiError(400, 'Username da ton tai');
   }
 
-  const user = await User.create({ username, password, fullName, role });
+  const user = await userRepository.create({ username, password, fullName, role });
   const tokens = generateTokens(user._id);
 
   const userObj = user.toObject();
@@ -28,7 +30,7 @@ const register = async ({ username, password, fullName, role }) => {
 };
 
 const login = async ({ username, password }) => {
-  const user = await User.findOne({ username });
+  const user = await userRepository.findByUsername(username);
   if (!user) {
     throw new ApiError(401, 'Username hoac password khong dung');
   }
@@ -52,7 +54,7 @@ const refreshToken = async (token) => {
   }
 
   const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-  const user = await User.findById(decoded.id);
+  const user = await userRepository.findById(decoded.id);
   if (!user) {
     throw new ApiError(401, 'Nguoi dung khong ton tai');
   }
