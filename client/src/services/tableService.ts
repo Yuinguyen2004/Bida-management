@@ -2,11 +2,17 @@ import api from './api';
 
 export interface Table {
   _id: string;
+  tableNumber: number;
   name: string;
   type: string;
   pricePerHour: number;
   status: 'available' | 'playing' | 'maintenance';
-  position?: { x: number; y: number };
+  position?: { 
+    row?: number; 
+    col?: number; 
+    x?: number; 
+    y?: number; 
+  };
 }
 
 export const tableService = {

@@ -23,6 +23,11 @@ initSocket(server);
 app.use(cors());
 app.use(express.json());
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'BIDA Restaurant Management API', version: '1.0.0' });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tables', tableRoutes);

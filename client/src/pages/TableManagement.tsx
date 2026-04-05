@@ -53,10 +53,12 @@ export const TableManagement: React.FC<TableManagementProps> = ({
     fetchTables();
   }, []);
 
-  const filteredTables = tables.filter(table =>
-    table.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    table.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTables = tables
+    .filter(table =>
+      table.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      table.type.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => (a.tableNumber || 0) - (b.tableNumber || 0));
 
   const handleEdit = (table: Table) => {
     setEditingId(table._id);
@@ -65,9 +67,14 @@ export const TableManagement: React.FC<TableManagementProps> = ({
 
   const handleSave = async () => {
     if (!editingId) return;
+    if (!editData.tableNumber) {
+      setError('Table Number is required');
+      return;
+    }
     try {
       if (isAdding) {
         await tableService.create({
+          tableNumber: editData.tableNumber,
           name: editData.name || '',
           type: editData.type || 'pool',
           pricePerHour: editData.pricePerHour || 0,
@@ -76,6 +83,7 @@ export const TableManagement: React.FC<TableManagementProps> = ({
         setIsAdding(false);
       } else {
         await tableService.update(editingId, {
+          tableNumber: editData.tableNumber,
           name: editData.name,
           type: editData.type,
           pricePerHour: editData.pricePerHour,
@@ -102,8 +110,10 @@ export const TableManagement: React.FC<TableManagementProps> = ({
 
   const handleAddNew = () => {
     const tempId = 'new-' + Date.now();
+    const nextTableNumber = Math.max(...tables.map(t => t.tableNumber || 0), 0) + 1;
     const newTable: Table = {
       _id: tempId,
+      tableNumber: nextTableNumber,
       name: '',
       type: 'pool',
       pricePerHour: 0,
@@ -182,6 +192,7 @@ export const TableManagement: React.FC<TableManagementProps> = ({
         {/* Data Table */}
         <div className="data-table">
           <div className="table-header">
+            <div className="header-cell">Table #</div>
             <div className="header-cell">Table Name</div>
             <div className="header-cell">Type</div>
             <div className="header-cell">Price/Hour</div>
@@ -195,6 +206,16 @@ export const TableManagement: React.FC<TableManagementProps> = ({
                 <div key={table._id} className="table-row">
                   {editingId === table._id ? (
                     <>
+                      <div className="cell">
+                        <input
+                          type="number"
+                          value={editData.tableNumber || ''}
+                          onChange={(e) => setEditData({ ...editData, tableNumber: parseInt(e.target.value) || 0 })}
+                          className="edit-input"
+                          placeholder="Table #"
+                          min="1"
+                        />
+                      </div>
                       <div className="cell">
                         <input
                           type="text"
@@ -243,6 +264,9 @@ export const TableManagement: React.FC<TableManagementProps> = ({
                     </>
                   ) : (
                     <>
+                      <div className="cell">
+                        <span className="cell-text" style={{ fontWeight: 'bold', color: 'var(--primary)' }}>#{table.tableNumber}</span>
+                      </div>
                       <div className="cell">
                         <span className="cell-text">{table.name}</span>
                       </div>

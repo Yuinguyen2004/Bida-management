@@ -64,7 +64,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout = () => {}, onNav
   const availableTablesCount = tables.filter(t => t.status === 'available').length;
   const maintenanceTablesCount = tables.filter(t => t.status === 'maintenance').length;
 
-  const gridTables = tables.map(table => {
+  // Sort tables by tableNumber
+  const sortedTables = [...tables].sort((a, b) => (a.tableNumber || 0) - (b.tableNumber || 0));
+
+  const gridTables = sortedTables.map(table => {
     const session = activeSessions.find(s => {
       const tableId = typeof s.tableId === 'object' ? s.tableId._id : s.tableId;
       return tableId === table._id;
@@ -72,6 +75,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout = () => {}, onNav
 
     return {
       id: table._id,
+      tableNumber: table.tableNumber,
       name: table.name,
       type: table.type,
       pricePerHour: table.pricePerHour,

@@ -9,6 +9,10 @@ class TableRepository {
     return Table.findById(id);
   }
 
+  async findOne(query) {
+    return Table.findOne(query);
+  }
+
   async create(tableData) {
     return Table.create(tableData);
   }

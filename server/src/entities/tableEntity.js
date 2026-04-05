@@ -4,6 +4,12 @@ const TABLE_TYPES = ['lo', 'carom', 'pool'];
 
 const tableSchema = new mongoose.Schema(
   {
+    tableNumber: {
+      type: Number,
+      required: true,
+      unique: true,
+      min: 1,
+    },
     name: {
       type: String,
       required: true,
@@ -29,6 +35,14 @@ const tableSchema = new mongoose.Schema(
       default: 'available',
     },
     position: {
+      row: {
+        type: Number,
+        min: 0,
+      },
+      col: {
+        type: Number,
+        min: 0,
+      },
       x: {
         type: Number,
         min: 0,

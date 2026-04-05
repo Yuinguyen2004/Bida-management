@@ -12,8 +12,8 @@ exports.getTableById = async (req, res) => {
 };
 
 exports.createTable = async (req, res) => {
-  const { name, type, pricePerHour, position } = req.body;
-  const table = await tableService.createTable({ name, type, pricePerHour, position });
+  const { tableNumber, name, type, pricePerHour, position } = req.body;
+  const table = await tableService.createTable({ tableNumber, name, type, pricePerHour, position });
   res.status(201).json({ success: true, data: table });
 };
 

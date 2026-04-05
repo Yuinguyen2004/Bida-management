@@ -6,6 +6,7 @@ import '../styles/table-grid.css';
 
 export interface TableData {
   id: string;
+  tableNumber?: number;
   name: string;
   type: string;
   pricePerHour: number;
@@ -94,7 +95,10 @@ export const TableGrid: React.FC<TableGridProps> = ({
                 </div>
 
                 <div className="table-card-content">
-                  <h3 className="table-name">{table.name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                    {table.tableNumber && <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>#{table.tableNumber}</span>}
+                    <h3 className="table-name">{table.name}</h3>
+                  </div>
                   <p className="table-type">{table.type} - {formatCurrency(table.pricePerHour)}/h</p>
 
                   {table.status === 'playing' && tableTimer && (

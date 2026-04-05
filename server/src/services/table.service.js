@@ -41,8 +41,18 @@ const getTableById = async (id) => {
   return serializeTable(table);
 };
 
-const createTable = async ({ name, type, pricePerHour, position }) => {
+const createTable = async ({ tableNumber, name, type, pricePerHour, position }) => {
+  if (!tableNumber) {
+    throw new ApiError(400, 'tableNumber is required');
+  }
+  
+  const existingTable = await tableRepository.findOne({ tableNumber });
+  if (existingTable) {
+    throw new ApiError(400, `Table number ${tableNumber} already exists`);
+  }
+
   const table = await tableRepository.create({
+    tableNumber,
     name,
     type: normalizeTableType(type),
     pricePerHour,
