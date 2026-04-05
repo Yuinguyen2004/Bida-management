@@ -26,10 +26,24 @@ const startSession = async (tableId, staffId) => {
 
   await tableRepository.update(tableId, { status: 'playing' });
 
-  const io = getIO();
-  io.to('tables').emit('table:statusChange', { tableId, status: 'playing' });
+  const fullSession = await sessionRepository.findById(session._id);
 
-  return sessionRepository.findById(session._id);
+  const io = getIO();
+  io.to('tables').emit('table:statusChange', {
+    tableId,
+    tableName: table.name,
+    status: 'playing',
+  });
+  io.to('tables').emit('session:started', {
+    sessionId: fullSession._id,
+    tableId,
+    tableName: table.name,
+    staffId: fullSession.staffId?._id,
+    staffName: fullSession.staffId?.fullName,
+    startedAt: fullSession.startTime,
+  });
+
+  return fullSession;
 };
 
 const endSession = async (sessionId) => {
@@ -66,7 +80,23 @@ const endSession = async (sessionId) => {
   await tableRepository.update(tableId, { status: 'available' });
 
   const io = getIO();
-  io.to('tables').emit('table:statusChange', { tableId, status: 'available' });
+  io.to('tables').emit('table:statusChange', {
+    tableId,
+    tableName: session.tableId.name,
+    status: 'available',
+  });
+  io.to('tables').emit('session:ended', {
+    sessionId: updatedSession._id,
+    tableId,
+    tableName: session.tableId.name,
+    staffId: session.staffId?._id,
+    staffName: session.staffId?.fullName,
+    duration: updatedSession.duration,
+    totalTableCost: updatedSession.totalTableCost,
+    totalFnbCost: updatedSession.totalFnbCost,
+    totalAmount: updatedSession.totalAmount,
+    endedAt: updatedSession.endTime,
+  });
 
   return updatedSession;
 };

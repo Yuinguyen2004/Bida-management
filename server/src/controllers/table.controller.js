@@ -24,6 +24,7 @@ exports.updateTable = async (req, res) => {
     const io = getIO();
     io.to('tables').emit('table:statusChange', {
       tableId: table._id,
+      tableName: table.name,
       status: table.status,
     });
   }

@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const TABLE_TYPES = ['lo', 'carom', 'pool'];
+
 const tableSchema = new mongoose.Schema(
   {
     name: {
@@ -8,7 +10,12 @@ const tableSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['snooker', 'pool', 'ping-pong'],
+      enum: {
+        values: TABLE_TYPES,
+        message: '{VALUE} is not a valid table type',
+      },
+      lowercase: true,
+      trim: true,
       required: true,
     },
     pricePerHour: {
