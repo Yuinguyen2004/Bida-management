@@ -12,7 +12,7 @@ interface FBManagementProps {
   onLogout?: () => void;
   user?: User | null;
 }
-
+// Define category options as a constant array
 const CATEGORY_OPTIONS = [
   { value: 'food', label: 'Food' },
   { value: 'beverage', label: 'Beverage' },
