@@ -1,3 +1,7 @@
+/**
+ * Header Component
+ * Displays the top navigation bar with user information and notifications
+ */
 import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import {
