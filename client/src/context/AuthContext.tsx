@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { authService, type User } from '../services/authService';
+import { toastService } from '../services/toastService';
 
 interface AuthContextType {
   user: User | null;
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('refreshToken', result.refreshToken);
     localStorage.setItem('user', JSON.stringify(result.user));
     setUser(result.user);
+    toastService.success(`Welcome back, ${result.user.fullName}`);
   };
 
   const register = async (username: string, password: string, fullName: string, email: string) => {
@@ -43,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('refreshToken', result.refreshToken);
     localStorage.setItem('user', JSON.stringify(result.user));
     setUser(result.user);
+    toastService.success('Account created successfully');
   };
 
   const logout = () => {
@@ -50,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setUser(null);
+    toastService.info('You have been signed out');
   };
 
   return (

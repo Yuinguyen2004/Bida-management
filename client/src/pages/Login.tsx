@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { toastService } from '../services/toastService'
 import '../styles/auth.css'
 
 interface LoginProps {
@@ -13,7 +14,6 @@ export default function Login({ onSuccess = () => {}, onSwitchPage = () => {} }:
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
-  const [apiError, setApiError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const validateForm = () => {
@@ -38,16 +38,18 @@ export default function Login({ onSuccess = () => {}, onSwitchPage = () => {} }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!validateForm()) return
+    if (!validateForm()) {
+      toastService.error('Please fix validation errors before signing in.')
+      return
+    }
     
     setIsLoading(true)
-    setApiError('')
     
     try {
       await login(email, password)
       onSuccess()
-    } catch (err: any) {
-      setApiError(err.response?.data?.message || 'Login failed. Please check your credentials.')
+    } catch {
+      // Error toast is handled globally in api interceptor
     } finally {
       setIsLoading(false)
     }
@@ -78,12 +80,6 @@ export default function Login({ onSuccess = () => {}, onSwitchPage = () => {} }:
               Access your staff dashboard
             </p>
           </div>
-
-          {apiError && (
-            <div className="api-error" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
-              {apiError}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="auth-form">
             {/* Email/Username Field */}

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toastService } from './toastService';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -38,9 +39,17 @@ api.interceptors.response.use(
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
+          toastService.error('Session expired. Please sign in again.');
           window.location.reload();
         }
       }
+    }
+
+    const shouldShowErrorToast = originalRequest?.meta?.showErrorToast !== false;
+    if (shouldShowErrorToast) {
+      const backendMessage = error?.response?.data?.message;
+      const fallback = error?.message || 'Request failed';
+      toastService.error(toastService.getErrorMessage(backendMessage, fallback));
     }
 
     return Promise.reject(error);

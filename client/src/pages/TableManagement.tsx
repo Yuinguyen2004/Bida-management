@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { tableService, type Table } from '../services/tableService';
+import { toastService } from '../services/toastService';
 import type { User } from '../services/authService';
 import type { AppPage } from '../utils/navigation';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -81,6 +82,7 @@ export const TableManagement: React.FC<TableManagementProps> = ({
           status: 'available',
         });
         setIsAdding(false);
+        toastService.success('Table created successfully');
       } else {
         await tableService.update(editingId, {
           tableNumber: editData.tableNumber,
@@ -89,12 +91,15 @@ export const TableManagement: React.FC<TableManagementProps> = ({
           pricePerHour: editData.pricePerHour,
           status: editData.status,
         });
+        toastService.success('Table updated successfully');
       }
       setEditingId(null);
       setEditData({});
       await fetchTables();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save table');
+      const message = err.response?.data?.message || 'Failed to save table';
+      setError(message);
+      toastService.error(message);
     }
   };
 
@@ -102,9 +107,12 @@ export const TableManagement: React.FC<TableManagementProps> = ({
     if (!confirm('Are you sure you want to delete this table?')) return;
     try {
       await tableService.delete(id);
+      toastService.success('Table deleted successfully');
       await fetchTables();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to delete table');
+      const message = err.response?.data?.message || 'Failed to delete table';
+      setError(message);
+      toastService.error(message);
     }
   };
 

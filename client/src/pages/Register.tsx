@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { toastService } from '../services/toastService'
 import '../styles/auth.css'
 
 interface RegisterProps {
@@ -18,7 +19,6 @@ export default function Register({ onSuccess = () => {}, onSwitchPage = () => {}
     agreeTerms: false,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [apiError, setApiError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const validateForm = () => {
@@ -80,16 +80,18 @@ export default function Register({ onSuccess = () => {}, onSwitchPage = () => {}
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!validateForm()) return
+    if (!validateForm()) {
+      toastService.error('Please fix validation errors before creating account.')
+      return
+    }
     
     setIsLoading(true)
-    setApiError('')
     
     try {
       await register(formData.username, formData.password, formData.fullName, formData.email)
       onSuccess()
-    } catch (err: any) {
-      setApiError(err.response?.data?.message || 'Registration failed. Please try again.')
+    } catch {
+      // Error toast is handled globally in api interceptor
     } finally {
       setIsLoading(false)
     }
@@ -120,12 +122,6 @@ export default function Register({ onSuccess = () => {}, onSwitchPage = () => {}
               Register as a staff or admin member
             </p>
           </div>
-
-          {apiError && (
-            <div className="api-error" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' }}>
-              {apiError}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="auth-form">
             {/* Username Field */}
