@@ -1,3 +1,7 @@
+/**
+ * Sidebar Component
+ * Provides navigation menu for different parts of the application
+ */
 import React, { useState } from 'react';
 import {
   Menu,
