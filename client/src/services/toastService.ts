@@ -12,8 +12,21 @@ type ToastSubscriber = (toast: ToastMessage) => void;
 let seed = 0;
 const subscribers = new Set<ToastSubscriber>();
 let isToastUIInitialized = false;
+let lastToastSignature = '';
+let lastToastAt = 0;
+const TOAST_DEDUPE_WINDOW_MS = 1200;
 
 const emit = (toast: Omit<ToastMessage, 'id'>) => {
+  const signature = `${toast.type}:${toast.message}`;
+  const now = Date.now();
+
+  if (signature === lastToastSignature && now - lastToastAt < TOAST_DEDUPE_WINDOW_MS) {
+    return;
+  }
+
+  lastToastSignature = signature;
+  lastToastAt = now;
+
   const nextToast: ToastMessage = {
     id: ++seed,
     duration: 3000,

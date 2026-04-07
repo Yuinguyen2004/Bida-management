@@ -78,6 +78,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout = () => {}, onNav
       tableNumber: table.tableNumber,
       name: table.name,
       type: table.type,
+      typeLabel: table.typeLabel,
       pricePerHour: table.pricePerHour,
       status: table.status,
       startTime: session ? new Date(session.startTime) : undefined,

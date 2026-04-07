@@ -4,6 +4,7 @@ export interface FnbItem {
   _id: string;
   name: string;
   category: string;
+  categoryLabel?: string;
   price: number;
   image?: string;
   isAvailable: boolean;

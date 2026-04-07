@@ -7,7 +7,9 @@ const { initSocket } = require('./config/socket');
 const errorHandler = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth.routes');
 const tableRoutes = require('./routes/table.routes');
+const tableTypeRoutes = require('./routes/tableType.routes');
 const fnbRoutes = require('./routes/fnb.routes');
+const fnbCategoryRoutes = require('./routes/fnbCategory.routes');
 const orderRoutes = require('./routes/order.routes');
 const customerRoutes = require('./routes/customer.routes');
 const sessionRoutes = require('./routes/session.routes');
@@ -31,7 +33,9 @@ app.get('/', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tables', tableRoutes);
+app.use('/api/table-types', tableTypeRoutes);
 app.use('/api/fnb', fnbRoutes);
+app.use('/api/fnb-categories', fnbCategoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/sessions', sessionRoutes);

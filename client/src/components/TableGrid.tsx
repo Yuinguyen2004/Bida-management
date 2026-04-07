@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, Zap, AlertCircle } from 'lucide-react';
 import TableActionModal from './TableActionModal';
 import { formatCurrency } from '../utils/formatCurrency';
+import { formatCodeLabel } from '../utils/formatCodeLabel';
 import '../styles/table-grid.css';
 
 export interface TableData {
@@ -9,6 +10,7 @@ export interface TableData {
   tableNumber?: number;
   name: string;
   type: string;
+  typeLabel?: string;
   pricePerHour: number;
   status: 'available' | 'playing' | 'reserved' | 'maintenance';
   startTime?: Date;
@@ -104,7 +106,7 @@ export const TableGrid: React.FC<TableGridProps> = ({
             {table.tableNumber && <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>#{table.tableNumber}</span>}
             <h3 className="table-name">{table.name}</h3>
           </div>
-          <p className="table-type">{table.type} - {formatCurrency(table.pricePerHour)}/h</p>
+          <p className="table-type">{table.typeLabel || formatCodeLabel(table.type)} - {formatCurrency(table.pricePerHour)}/h</p>
 
           {table.status === 'playing' && tableTimer && (
             <div className="table-timer">

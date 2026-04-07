@@ -113,6 +113,7 @@ export const StaffTableOperations: React.FC<StaffTableOperationsProps> = ({
         id: table._id,
         name: table.name,
         type: table.type,
+        typeLabel: table.typeLabel,
         pricePerHour: table.pricePerHour,
         status: table.status,
         startTime: session ? new Date(session.startTime) : undefined,
@@ -123,12 +124,13 @@ export const StaffTableOperations: React.FC<StaffTableOperationsProps> = ({
   }, [activeSessions, tables]);
 
   const filteredTables = tableOperations.filter((table) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      table.name.toLowerCase().includes(query) ||
-      table.type.toLowerCase().includes(query) ||
-      table.status.toLowerCase().includes(query)
-    );
+        const query = searchQuery.toLowerCase();
+        return (
+          table.name.toLowerCase().includes(query) ||
+          table.type.toLowerCase().includes(query) ||
+          (table.typeLabel || '').toLowerCase().includes(query) ||
+          table.status.toLowerCase().includes(query)
+        );
   });
 
   const activeTableCount = tableOperations.filter((table) => table.status === 'playing').length;
@@ -215,7 +217,7 @@ export const StaffTableOperations: React.FC<StaffTableOperationsProps> = ({
                     <div className="cell">
                       <div>
                         <span className="cell-text">{table.name}</span>
-                        <div className="cell-subtext">{table.type.toUpperCase()}</div>
+                        <div className="cell-subtext">{table.typeLabel || table.type.toUpperCase()}</div>
                       </div>
                     </div>
                     <div className="cell">

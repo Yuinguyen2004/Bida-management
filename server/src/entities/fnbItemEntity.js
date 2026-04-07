@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
 
-const FNB_CATEGORIES = ['food', 'beverage', 'nuoc', 'bia', 'snack'];
-
 const fnbItemSchema = new mongoose.Schema(
   {
     name: {
@@ -10,10 +8,6 @@ const fnbItemSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: {
-        values: FNB_CATEGORIES,
-        message: '{VALUE} is not a valid F&B category',
-      },
       lowercase: true,
       trim: true,
       required: true,

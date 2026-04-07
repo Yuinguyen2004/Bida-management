@@ -1,46 +1,46 @@
 const TableRepository = require('../repositories/TableRepository');
 const SessionRepository = require('../repositories/SessionRepository');
+const { ensureActiveTableTypeExists, getTableTypeNameMap } = require('./tableType.service');
 const ApiError = require('../utils/apiError');
 
 const tableRepository = new TableRepository();
 const sessionRepository = new SessionRepository();
-const TABLE_TYPE_ALIASES = {
-  snooker: 'lo',
-  'ping-pong': 'carom',
-};
 
 const normalizeTableType = (type) => {
   if (typeof type !== 'string') {
     return type;
   }
 
-  const normalizedType = type.trim().toLowerCase();
-  return TABLE_TYPE_ALIASES[normalizedType] || normalizedType;
+  return type.trim().toLowerCase();
 };
 
-const serializeTable = (table) => {
+const serializeTable = (table, typeNameMap = {}) => {
   if (!table) {
     return table;
   }
 
   const serializedTable = typeof table.toObject === 'function' ? table.toObject() : { ...table };
+  const normalizedType = normalizeTableType(serializedTable.type);
   return {
     ...serializedTable,
-    type: normalizeTableType(serializedTable.type),
+    type: normalizedType,
+    typeLabel: typeNameMap[normalizedType] || normalizedType,
   };
 };
 
 const getAllTables = async () => {
+  const typeNameMap = await getTableTypeNameMap();
   const tables = await tableRepository.findAll();
-  return tables.map(serializeTable);
+  return tables.map((table) => serializeTable(table, typeNameMap));
 };
 
 const getTableById = async (id) => {
+  const typeNameMap = await getTableTypeNameMap();
   const table = await tableRepository.findById(id);
   if (!table) {
     throw new ApiError(404, 'Table not found');
   }
-  return serializeTable(table);
+  return serializeTable(table, typeNameMap);
 };
 
 const createTable = async ({ tableNumber, name, type, pricePerHour, position }) => {
@@ -53,15 +53,19 @@ const createTable = async ({ tableNumber, name, type, pricePerHour, position }) 
     throw new ApiError(400, `Table number ${tableNumber} already exists`);
   }
 
+  const normalizedType = normalizeTableType(type);
+  await ensureActiveTableTypeExists(normalizedType);
+
   const table = await tableRepository.create({
     tableNumber,
     name,
-    type: normalizeTableType(type),
+    type: normalizedType,
     pricePerHour,
     position,
     status: 'available',
   });
-  return serializeTable(table);
+  const typeNameMap = await getTableTypeNameMap();
+  return serializeTable(table, typeNameMap);
 };
 
 const updateTable = async (id, updateData) => {
@@ -82,6 +86,11 @@ const updateTable = async (id, updateData) => {
     }
   }
 
+  if (Object.prototype.hasOwnProperty.call(updateData, 'type')) {
+    const normalizedType = normalizeTableType(updateData.type);
+    await ensureActiveTableTypeExists(normalizedType);
+  }
+
   const normalizedUpdateData = {
     ...updateData,
     type: normalizeTableType(updateData.type),
@@ -92,7 +101,8 @@ const updateTable = async (id, updateData) => {
   }
 
   const table = await tableRepository.update(id, normalizedUpdateData);
-  return serializeTable(table);
+  const typeNameMap = await getTableTypeNameMap();
+  return serializeTable(table, typeNameMap);
 };
 
 const deleteTable = async (id) => {

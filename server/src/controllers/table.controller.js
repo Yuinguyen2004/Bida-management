@@ -3,7 +3,6 @@ const { getIO } = require('../config/socket');
 const ApiError = require('../utils/apiError');
 const validateObjectId = require('../utils/validateObjectId');
 
-const TABLE_TYPES = ['lo', 'carom', 'pool', 'snooker', 'ping-pong'];
 const TABLE_STATUSES = ['available', 'playing', 'maintenance'];
 const TABLE_UPDATE_FIELDS = ['tableNumber', 'name', 'type', 'pricePerHour', 'status', 'position'];
 
@@ -43,13 +42,7 @@ const parseTableType = (value) => {
   if (typeof value !== 'string' || !value.trim()) {
     throw new ApiError(400, 'type la bat buoc');
   }
-
-  const normalizedType = value.trim().toLowerCase();
-  if (!TABLE_TYPES.includes(normalizedType)) {
-    throw new ApiError(400, 'type khong hop le');
-  }
-
-  return normalizedType;
+  return value.trim().toLowerCase();
 };
 
 const parseTableStatus = (value) => {

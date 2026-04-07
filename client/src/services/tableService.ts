@@ -5,6 +5,7 @@ export interface Table {
   tableNumber: number;
   name: string;
   type: string;
+  typeLabel?: string;
   pricePerHour: number;
   status: 'available' | 'playing' | 'maintenance';
   position?: { 

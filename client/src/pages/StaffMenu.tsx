@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import MainLayout from '../components/MainLayout';
 import { fnbService, type FnbItem } from '../services/fnbService';
+import { fnbCategoryService, type FnbCategory } from '../services/fnbCategoryService';
 import type { User } from '../services/authService';
 import type { AppPage } from '../utils/navigation';
 import { formatCurrency } from '../utils/formatCurrency';
+import { formatCodeLabel } from '../utils/formatCodeLabel';
 import '../styles/management.css';
 
 interface StaffMenuProps {
@@ -13,22 +15,13 @@ interface StaffMenuProps {
   user?: User | null;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  food: 'Food',
-  beverage: 'Beverage',
-  nuoc: 'Nuoc',
-  bia: 'Bia',
-  snack: 'Snack',
-};
-
-const getCategoryLabel = (category: string) => CATEGORY_LABELS[category.toLowerCase()] ?? category;
-
 export const StaffMenu: React.FC<StaffMenuProps> = ({
   onNavigate = () => {},
   onLogout = () => {},
   user,
 }) => {
   const [items, setItems] = useState<FnbItem[]>([]);
+  const [categories, setCategories] = useState<FnbCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -36,8 +29,12 @@ export const StaffMenu: React.FC<StaffMenuProps> = ({
   useEffect(() => {
     const loadMenu = async () => {
       try {
-        const menuItems = await fnbService.getAll();
+        const [menuItems, categoryData] = await Promise.all([
+          fnbService.getAll(),
+          fnbCategoryService.getAll(true),
+        ]);
         setItems(menuItems);
+        setCategories(categoryData);
       } catch (error) {
         console.error('Failed to load staff menu:', error);
       } finally {
@@ -48,7 +45,19 @@ export const StaffMenu: React.FC<StaffMenuProps> = ({
     void loadMenu();
   }, []);
 
-  const categories = useMemo(() => {
+  const categoryLabelByCode = useMemo(
+    () =>
+      categories.reduce<Record<string, string>>((accumulator, category) => {
+        accumulator[category.code] = category.name;
+        return accumulator;
+      }, {}),
+    [categories]
+  );
+
+  const getCategoryLabel = (category: string) =>
+    categoryLabelByCode[category.toLowerCase()] || formatCodeLabel(category);
+
+  const categoryFilters = useMemo(() => {
     const uniqueCategories = Array.from(new Set(items.map((item) => item.category.toLowerCase())));
     return ['all', ...uniqueCategories];
   }, [items]);
@@ -58,7 +67,8 @@ export const StaffMenu: React.FC<StaffMenuProps> = ({
     const query = searchQuery.toLowerCase();
     const matchesQuery =
       item.name.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query);
+      item.category.toLowerCase().includes(query) ||
+      getCategoryLabel(item.category).toLowerCase().includes(query);
 
     return matchesCategory && matchesQuery;
   });
@@ -114,7 +124,7 @@ export const StaffMenu: React.FC<StaffMenuProps> = ({
         </div>
 
         <div className="category-filters">
-          {categories.map((category) => (
+          {categoryFilters.map((category) => (
             <button
               key={category}
               className={`filter-chip-button ${selectedCategory === category ? 'active' : ''}`}
@@ -175,7 +185,7 @@ export const StaffMenu: React.FC<StaffMenuProps> = ({
         <div className="stats-footer">
           <div className="stat">
             <span className="stat-label">Visible Categories</span>
-            <span className="stat-value">{categories.length - 1}</span>
+            <span className="stat-value">{categoryFilters.length - 1}</span>
           </div>
           <div className="stat">
             <span className="stat-label">Ready To Serve</span>
