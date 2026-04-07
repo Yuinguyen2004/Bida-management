@@ -191,6 +191,14 @@
   transition: background 0.15s ease;
 }
 
+.table-header--with-pos {
+  grid-template-columns: 60px 1fr 75px 95px 50px 50px 110px 200px;
+}
+
+.table-row--with-pos {
+  grid-template-columns: 60px 1fr 75px 95px 50px 50px 110px 200px;
+}
+
 .table-row:last-child {
   border-bottom: none;
 }

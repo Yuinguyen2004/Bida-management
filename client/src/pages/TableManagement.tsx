@@ -73,6 +73,10 @@ export const TableManagement: React.FC<TableManagementProps> = ({
       return;
     }
     try {
+      const positionPayload = {
+        row: editData.position?.row ?? 0,
+        col: editData.position?.col ?? 0,
+      };
       if (isAdding) {
         await tableService.create({
           tableNumber: editData.tableNumber,
@@ -80,6 +84,7 @@ export const TableManagement: React.FC<TableManagementProps> = ({
           type: editData.type || 'pool',
           pricePerHour: editData.pricePerHour || 0,
           status: 'available',
+          position: positionPayload,
         });
         setIsAdding(false);
         toastService.success('Table created successfully');
@@ -90,6 +95,7 @@ export const TableManagement: React.FC<TableManagementProps> = ({
           type: editData.type,
           pricePerHour: editData.pricePerHour,
           status: editData.status,
+          position: positionPayload,
         });
         toastService.success('Table updated successfully');
       }
@@ -199,11 +205,13 @@ export const TableManagement: React.FC<TableManagementProps> = ({
 
         {/* Data Table */}
         <div className="data-table">
-          <div className="table-header">
+          <div className="table-header table-header--with-pos">
             <div className="header-cell">Table #</div>
             <div className="header-cell">Table Name</div>
             <div className="header-cell">Type</div>
             <div className="header-cell">Price/Hour</div>
+            <div className="header-cell">Row</div>
+            <div className="header-cell">Col</div>
             <div className="header-cell">Status</div>
             <div className="header-cell">Actions</div>
           </div>
@@ -211,7 +219,7 @@ export const TableManagement: React.FC<TableManagementProps> = ({
           {filteredTables.length > 0 ? (
             <div className="table-body">
               {filteredTables.map(table => (
-                <div key={table._id} className="table-row">
+                <div key={table._id} className="table-row table-row--with-pos">
                   {editingId === table._id ? (
                     <>
                       <div className="cell">
@@ -256,6 +264,26 @@ export const TableManagement: React.FC<TableManagementProps> = ({
                         />
                       </div>
                       <div className="cell">
+                        <input
+                          type="number"
+                          value={editData.position?.row ?? 0}
+                          onChange={(e) => setEditData({ ...editData, position: { ...editData.position, row: parseInt(e.target.value) || 0 } })}
+                          className="edit-input"
+                          placeholder="Row"
+                          min="0"
+                        />
+                      </div>
+                      <div className="cell">
+                        <input
+                          type="number"
+                          value={editData.position?.col ?? 0}
+                          onChange={(e) => setEditData({ ...editData, position: { ...editData.position, col: parseInt(e.target.value) || 0 } })}
+                          className="edit-input"
+                          placeholder="Col"
+                          min="0"
+                        />
+                      </div>
+                      <div className="cell">
                         <select
                           value={editData.status || 'available'}
                           onChange={(e) => setEditData({ ...editData, status: e.target.value as Table['status'] })}
@@ -283,6 +311,12 @@ export const TableManagement: React.FC<TableManagementProps> = ({
                       </div>
                       <div className="cell">
                         <span className="price">{formatCurrency(table.pricePerHour)}</span>
+                      </div>
+                      <div className="cell">
+                        <span className="cell-text">{table.position?.row ?? 0}</span>
+                      </div>
+                      <div className="cell">
+                        <span className="cell-text">{table.position?.col ?? 0}</span>
                       </div>
                       <div className="cell">
                         <span className={`status-badge status-${table.status}`}>

@@ -13,6 +13,7 @@ export interface TableData {
   status: 'available' | 'playing' | 'reserved' | 'maintenance';
   startTime?: Date;
   sessionId?: string;
+  position?: { row?: number; col?: number };
 }
 
 interface TableGridProps {
@@ -27,6 +28,14 @@ export const TableGrid: React.FC<TableGridProps> = ({
   const [activeTables, setActiveTables] = useState<{ [key: string]: { elapsed: string; bill: number } }>({});
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const hasMapLayout = tables.some(t => t.position?.row != null && t.position?.col != null);
+  const mapGrid = React.useMemo(() => {
+    if (!hasMapLayout) return null;
+    const maxRow = Math.max(...tables.map(t => t.position?.row ?? 0));
+    const maxCol = Math.max(...tables.map(t => t.position?.col ?? 0));
+    return { rows: maxRow + 1, cols: maxCol + 1 };
+  }, [tables, hasMapLayout]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -79,63 +88,85 @@ export const TableGrid: React.FC<TableGridProps> = ({
     }
   };
 
+  const renderTableCard = (table: TableData) => {
+    const tableTimer = activeTables[table.id];
+    const statusColor = getStatusColor(table.status);
+
+    return (
+      <div key={table.id} className={`table-card status-${statusColor}`}>
+        <div className="table-status-badge">
+          <span className={`status-dot status-${statusColor}`}></span>
+          <span className="status-text">{getStatusLabel(table.status)}</span>
+        </div>
+
+        <div className="table-card-content">
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+            {table.tableNumber && <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>#{table.tableNumber}</span>}
+            <h3 className="table-name">{table.name}</h3>
+          </div>
+          <p className="table-type">{table.type} - {formatCurrency(table.pricePerHour)}/h</p>
+
+          {table.status === 'playing' && tableTimer && (
+            <div className="table-timer">
+              <div className="timer-display">
+                <Clock size={16} />
+                <span className="timer-text">{tableTimer.elapsed}</span>
+              </div>
+              <div className="bill-display">
+                <Zap size={16} />
+                <span className="bill-amount">{formatCurrency(tableTimer.bill)}</span>
+              </div>
+            </div>
+          )}
+
+          {table.status === 'maintenance' && (
+            <div className="maintenance-alert">
+              <AlertCircle size={16} />
+              <span>Under Maintenance</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          className="table-action-btn"
+          title={`Manage ${table.name}`}
+          onClick={() => {
+            setSelectedTable(table);
+            setIsModalOpen(true);
+          }}
+        >
+          <span>→</span>
+        </button>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="table-grid-container">
-        <div className="table-grid">
-          {tables.map((table) => {
-            const tableTimer = activeTables[table.id];
-            const statusColor = getStatusColor(table.status);
-
-            return (
-              <div key={table.id} className={`table-card status-${statusColor}`}>
-                <div className="table-status-badge">
-                  <span className={`status-dot status-${statusColor}`}></span>
-                  <span className="status-text">{getStatusLabel(table.status)}</span>
+        {hasMapLayout && mapGrid ? (
+          <div
+            className="table-grid table-grid--map"
+            style={{
+              gridTemplateRows: `repeat(${mapGrid.rows}, 1fr)`,
+              gridTemplateColumns: `repeat(${mapGrid.cols}, 1fr)`,
+            }}
+          >
+            {tables.map((table) => {
+              const row = (table.position?.row ?? 0) + 1;
+              const col = (table.position?.col ?? 0) + 1;
+              return (
+                <div key={table.id} style={{ gridRow: row, gridColumn: col }}>
+                  {renderTableCard(table)}
                 </div>
-
-                <div className="table-card-content">
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-                    {table.tableNumber && <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>#{table.tableNumber}</span>}
-                    <h3 className="table-name">{table.name}</h3>
-                  </div>
-                  <p className="table-type">{table.type} - {formatCurrency(table.pricePerHour)}/h</p>
-
-                  {table.status === 'playing' && tableTimer && (
-                    <div className="table-timer">
-                      <div className="timer-display">
-                        <Clock size={16} />
-                        <span className="timer-text">{tableTimer.elapsed}</span>
-                      </div>
-                      <div className="bill-display">
-                        <Zap size={16} />
-                        <span className="bill-amount">{formatCurrency(tableTimer.bill)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {table.status === 'maintenance' && (
-                    <div className="maintenance-alert">
-                      <AlertCircle size={16} />
-                      <span>Under Maintenance</span>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  className="table-action-btn"
-                  title={`Manage ${table.name}`}
-                  onClick={() => {
-                    setSelectedTable(table);
-                    setIsModalOpen(true);
-                  }}
-                >
-                  <span>→</span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="table-grid">
+            {tables.map((table) => renderTableCard(table))}
+          </div>
+        )}
       </div>
 
       {selectedTable && (

@@ -117,6 +117,7 @@ export const StaffTableOperations: React.FC<StaffTableOperationsProps> = ({
         status: table.status,
         startTime: session ? new Date(session.startTime) : undefined,
         sessionId: session?._id,
+        position: table.position,
       };
     });
   }, [activeSessions, tables]);
