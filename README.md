@@ -1,56 +1,63 @@
 # Bida Management
 
-Bida Management is a full-stack billiard club management system built for day-to-day table operations, food and beverage ordering, billing, staff workflows, and admin reporting.
+`Bida Management` is a full-stack billiard club management system for live table operations, F&B ordering, checkout, customer tracking, and admin reporting.
 
-The project includes:
+The codebase includes:
 
-- A Node.js + Express backend with MongoDB, JWT authentication, and Socket.IO
-- A React + Vite frontend with role-aware screens for admin and staff
-- Real-time table status refresh for active operations
+- A Node.js + Express + MongoDB backend with JWT authentication and Socket.IO
+- A React + TypeScript + Vite frontend with separate admin and staff workflows
+- Master-data CRUD for billiard `table types` and F&B `categories`
+- Real-time table status refresh across active screens
 
-## Features
+## Feature Overview
 
-### Authentication and roles
+### Authentication and access control
 
-- JWT-based login, registration, token refresh, and current-user lookup
-- Role-aware UI behavior for `admin` and `staff`
-- Admin-only backend protection for restricted resources
+- Login, register, token refresh, and current-user lookup
+- Role-aware frontend navigation for `admin` and `staff`
+- Protected backend routes with admin-only enforcement where required
 
-### Table operations
+### Table and session workflow
 
-- Live table dashboard with status visibility
-- Start a session for an available table
-- Track active session elapsed time and estimated table cost
-- Complete checkout and generate a final session summary
-- Real-time dashboard refresh through Socket.IO table events
+- Live dashboard for table status
+- Start a session on an available table
+- Track elapsed play time and estimated table cost
+- Close a session and calculate final billing
+- Socket.IO-based refresh on table status changes
 
-### Food and beverage workflow
+### F&B workflow
 
-- Admin CRUD for menu items
-- Staff can add F&B items to an active table session
-- Existing and new session orders are summarized in the table action modal
+- CRUD for F&B menu items
+- CRUD for F&B category master data
+- Add F&B orders to active table sessions
+- Read-only staff menu for service-side lookup
 
-### Admin tools
+### Admin operations
 
-- Table management page for billiard table CRUD
-- F&B management page for menu maintenance
-- Revenue analytics page for admin-only reporting
+- CRUD for billiard tables
+- CRUD for table type master data
+- Revenue analytics
+- Customer CRM management
 
-### Staff tools
+### Staff operations
 
-- Dedicated staff table operations page
-- Read-only staff menu page
-- My Profile and Notifications pages shared across roles
+- Dedicated table service screen
+- Read-only service menu
+- Shared profile and notification screens
 
-### Backend domain coverage
+## Current Domain Model
+
+The main backend domains currently covered are:
 
 - Users
 - Tables
+- Table types
 - Sessions
-- Orders
 - F&B items
+- F&B categories
+- Orders
 - Revenue
-- Customers and loyalty-style visit / points endpoints
+- Customers
 
 ## Tech Stack
 
@@ -67,35 +74,35 @@ The project includes:
 ### Backend
 
 - Node.js
-- Express
+- Express 5
 - MongoDB with Mongoose
-- JWT authentication
+- JWT
 - Socket.IO
 - bcrypt
 
 ## Architecture
 
-The repository is split into two applications:
+The repository contains two applications:
 
 - `client/`: React frontend
-- `server/`: Express API and Socket.IO server
+- `server/`: Express API + Socket.IO server
 
 The backend follows a layered structure:
 
 - `routes/` for HTTP endpoints
 - `controllers/` for request handling
-- `services/` for business logic
+- `services/` for business rules
 - `repositories/` for database access
-- `models/` and `entities/` for Mongoose schemas and model exports
-- `middleware/` for auth, role checks, and error handling
+- `models/` and `entities/` for Mongoose definitions
+- `middleware/` for auth, roles, and centralized error handling
 
 The frontend is organized by:
 
-- `pages/` for major screens
-- `components/` for reusable UI pieces
-- `services/` for API access
-- `context/` for authentication state
-- `styles/` for page/component styling
+- `pages/` for main screens
+- `components/` for shared UI
+- `services/` for API clients
+- `context/` for auth state
+- `styles/` for screen/component styling
 - `utils/` for formatting and navigation helpers
 
 ## Repository Structure
@@ -122,16 +129,16 @@ bida-management/
 │   │   ├── routes/
 │   │   ├── services/
 │   │   └── utils/
+│   ├── .env.example
 │   └── package.json
 ├── docs/
-├── rules/
 ├── tasks/
 └── README.md
 ```
 
 ## Prerequisites
 
-Before running the project locally, make sure you have:
+Before running locally, make sure you have:
 
 - Node.js 18 or newer
 - npm
@@ -148,39 +155,37 @@ cd Bida-management
 
 ### 2. Install dependencies
 
-Install backend dependencies:
+Backend:
 
 ```bash
 cd server
 npm install
 ```
 
-Install frontend dependencies:
+Frontend:
 
 ```bash
 cd ../client
 npm install
 ```
 
-## Environment Configuration
+## Environment Setup
 
-This project does not currently ship with a `.env.example`, so create the environment files manually.
+### Backend
 
-### Backend environment
-
-Create `server/.env`:
+The repository already includes `server/.env.example`. Copy it to `server/.env` and adjust the values:
 
 ```env
 PORT=3000
 MONGODB_URI=mongodb://127.0.0.1:27017/bida-management
 JWT_SECRET=replace-with-a-secure-secret
-JWT_EXPIRE=1d
 JWT_REFRESH_SECRET=replace-with-a-secure-refresh-secret
+JWT_EXPIRE=15m
 JWT_REFRESH_EXPIRE=7d
 CLIENT_URL=http://localhost:5173
 ```
 
-### Frontend environment
+### Frontend
 
 Create `client/.env`:
 
@@ -189,32 +194,33 @@ VITE_API_URL=http://localhost:3000/api
 VITE_SOCKET_URL=http://localhost:3000
 ```
 
-## Important Local Setup Note
+## Port Alignment Note
 
-The frontend fallback API URL is `http://localhost:3000/api`, but the backend fallback port in code is `5000`.
+The frontend defaults to `http://localhost:3000/api` when `VITE_API_URL` is not provided.
 
-That means you should do one of the following:
+The backend defaults to port `5000` when `PORT` is missing in `server/.env`.
 
-1. Recommended: set `PORT=3000` in `server/.env` and keep the frontend values above.
-2. Or run the backend on port `5000` and change the frontend env values to:
+To avoid a broken local setup, do one of these:
+
+1. Recommended: set `PORT=3000` in `server/.env` and keep the frontend env above.
+2. Or keep backend on `5000` and set:
 
 ```env
 VITE_API_URL=http://localhost:5000/api
 VITE_SOCKET_URL=http://localhost:5000
+CLIENT_URL=http://localhost:5173
 ```
 
-If you do not align these values, the frontend will fail to reach the API.
+## Running the App
 
-## Running the Application
-
-Start the backend:
+Start backend:
 
 ```bash
 cd server
 npm run dev
 ```
 
-Start the frontend in another terminal:
+Start frontend in another terminal:
 
 ```bash
 cd client
@@ -228,23 +234,25 @@ Then open:
 
 ## Available Scripts
 
-### Frontend
-
-From `client/`:
-
-- `npm run dev`: start the Vite development server
-- `npm run build`: run TypeScript build and create a production bundle
-- `npm run lint`: run ESLint
-- `npm run preview`: preview the production build locally
-
 ### Backend
 
 From `server/`:
 
-- `npm run dev`: start the backend with file watching
-- `npm start`: start the backend normally
+- `npm run dev`: start backend in watch mode
+- `npm start`: start backend normally
+
+### Frontend
+
+From `client/`:
+
+- `npm run dev`: start Vite dev server
+- `npm run build`: type-check and create production bundle
+- `npm run lint`: run ESLint
+- `npm run preview`: preview the production build
 
 ## API Overview
+
+All non-auth routes require a valid JWT.
 
 ### Auth
 
@@ -261,6 +269,14 @@ From `server/`:
 - `PUT /api/tables/:id`
 - `DELETE /api/tables/:id`
 
+### Table Types
+
+- `GET /api/table-types`
+- `GET /api/table-types/:id`
+- `POST /api/table-types`
+- `PUT /api/table-types/:id`
+- `DELETE /api/table-types/:id`
+
 ### Sessions
 
 - `POST /api/sessions/start`
@@ -268,13 +284,21 @@ From `server/`:
 - `GET /api/sessions/:id`
 - `GET /api/sessions`
 
-### F&B
+### F&B Items
 
 - `GET /api/fnb`
 - `GET /api/fnb/:id`
 - `POST /api/fnb`
 - `PUT /api/fnb/:id`
 - `DELETE /api/fnb/:id`
+
+### F&B Categories
+
+- `GET /api/fnb-categories`
+- `GET /api/fnb-categories/:id`
+- `POST /api/fnb-categories`
+- `PUT /api/fnb-categories/:id`
+- `DELETE /api/fnb-categories/:id`
 
 ### Orders
 
@@ -303,62 +327,46 @@ From `server/`:
 
 Socket.IO is used for live table updates.
 
-Current events in the codebase include:
+Current events in the codebase:
 
 - `table:getAll`
 - `table:statusChange`
 
-## Roles and Access
+## Role Access
 
 ### Admin
 
 - Dashboard
 - Table management
 - F&B management
-- Revenue analytics
-- Profile and notifications
+- Customer CRM
+- Revenue reports
+- Profile
+- Notifications
 
 ### Staff
 
+- Dashboard
 - Table service operations
-- Staff menu view
-- Profile and notifications
+- Service menu
+- Customer CRM
+- Profile
+- Notifications
 
-## Current Status
+## Current Notes
 
-The project already includes the core workflow for:
-
-- Authentication
-- Role-aware frontend navigation
-- Table operations
-- Session start and checkout
-- F&B ordering
-- Admin management pages
-- Revenue reporting
-- Real-time table refresh
-
-There are still areas that can be improved, especially:
-
-- Automated tests
-- Better production deployment setup
-- Bundle size optimization on the frontend
-- More complete documentation for seeding, demo accounts, and deployment
-
-## Known Notes
-
-- The frontend production build currently completes successfully, but Vite reports a large main bundle warning.
-- The app uses in-app page switching instead of React Router.
-- Some backend validation and messages still reflect earlier project language choices; the system behavior is in place, but polish can be improved further.
+- The frontend uses in-app page switching instead of React Router.
+- The frontend build currently succeeds, but Vite still reports a large bundle warning.
+- Table types and F&B categories are now managed as master data, while tables and F&B items still store the selected `code` as a string for compatibility.
 
 ## Future Improvements
 
-- Add `.env.example` files for both frontend and backend
-- Add database seed scripts and sample users
-- Add automated tests for critical business flows
-- Add Docker support
-- Split the frontend bundle to reduce the large chunk warning
-- Introduce production-ready deployment documentation
+- Add automated tests for critical flows
+- Add seed scripts and demo users
+- Improve production deployment documentation
+- Reduce the large frontend bundle through code splitting
+- Add Docker-based local development support
 
 ## License
 
-This project currently has no explicit license file in the repository. Add one before distributing or using it beyond internal or educational purposes.
+This repository does not currently include a license file. Add one before distributing the project beyond internal or educational use.
