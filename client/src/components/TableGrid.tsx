@@ -1,0 +1,199 @@
+import React, { useState, useEffect } from 'react';
+import { Clock, Zap, AlertCircle } from 'lucide-react';
+import TableActionModal from './TableActionModal';
+import { formatCurrency } from '../utils/formatCurrency';
+import { formatCodeLabel } from '../utils/formatCodeLabel';
+import '../styles/table-grid.css';
+
+export interface TableData {
+  id: string;
+  tableNumber?: number;
+  name: string;
+  type: string;
+  typeLabel?: string;
+  pricePerHour: number;
+  status: 'available' | 'playing' | 'reserved' | 'maintenance';
+  startTime?: Date;
+  sessionId?: string;
+  position?: { row?: number; col?: number };
+}
+
+interface TableGridProps {
+  tables?: TableData[];
+  onTableUpdate?: () => void;
+}
+
+export const TableGrid: React.FC<TableGridProps> = ({
+  tables = [],
+  onTableUpdate,
+}) => {
+  const [activeTables, setActiveTables] = useState<{ [key: string]: { elapsed: string; bill: number } }>({});
+  const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const hasMapLayout = tables.some(t => t.position?.row != null && t.position?.col != null);
+  const mapGrid = React.useMemo(() => {
+    if (!hasMapLayout) return null;
+    const maxRow = Math.max(...tables.map(t => t.position?.row ?? 0));
+    const maxCol = Math.max(...tables.map(t => t.position?.col ?? 0));
+    return { rows: maxRow + 1, cols: maxCol + 1 };
+  }, [tables, hasMapLayout]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const updated: { [key: string]: { elapsed: string; bill: number } } = {};
+
+      tables.forEach((table) => {
+        if (table.status === 'playing' && table.startTime) {
+          const elapsedMs = Date.now() - new Date(table.startTime).getTime();
+          const totalSeconds = Math.floor(elapsedMs / 1000);
+          const hours = Math.floor(totalSeconds / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          const seconds = totalSeconds % 60;
+
+          const timeStr = hours > 0
+            ? `${hours}h ${minutes}m`
+            : `${minutes}m ${seconds}s`;
+
+          const billAmount = (totalSeconds / 3600) * table.pricePerHour;
+
+          updated[table.id] = {
+            elapsed: timeStr,
+            bill: billAmount,
+          };
+        }
+      });
+
+      setActiveTables(updated);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [tables]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available': return 'green';
+      case 'playing': return 'red';
+      case 'reserved': return 'yellow';
+      case 'maintenance': return 'grey';
+      default: return 'grey';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'available': return 'Available';
+      case 'playing': return 'In Use';
+      case 'reserved': return 'Reserved';
+      case 'maintenance': return 'Maintenance';
+      default: return status;
+    }
+  };
+
+  const renderTableCard = (table: TableData) => {
+    const tableTimer = activeTables[table.id];
+    const statusColor = getStatusColor(table.status);
+
+    return (
+      <div key={table.id} className={`table-card status-${statusColor}`}>
+        <div className="table-status-badge">
+          <span className={`status-dot status-${statusColor}`}></span>
+          <span className="status-text">{getStatusLabel(table.status)}</span>
+        </div>
+
+        <div className="table-card-content">
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+            {table.tableNumber && <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>#{table.tableNumber}</span>}
+            <h3 className="table-name">{table.name}</h3>
+          </div>
+          <p className="table-type">{table.typeLabel || formatCodeLabel(table.type)} - {formatCurrency(table.pricePerHour)}/h</p>
+
+          {table.status === 'playing' && tableTimer && (
+            <div className="table-timer">
+              <div className="timer-display">
+                <Clock size={16} />
+                <span className="timer-text">{tableTimer.elapsed}</span>
+              </div>
+              <div className="bill-display">
+                <Zap size={16} />
+                <span className="bill-amount">{formatCurrency(tableTimer.bill)}</span>
+              </div>
+            </div>
+          )}
+
+          {table.status === 'maintenance' && (
+            <div className="maintenance-alert">
+              <AlertCircle size={16} />
+              <span>Under Maintenance</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          className="table-action-btn"
+          title={`Manage ${table.name}`}
+          onClick={() => {
+            setSelectedTable(table);
+            setIsModalOpen(true);
+          }}
+        >
+          <span>→</span>
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <div className="table-grid-container">
+        {hasMapLayout && mapGrid ? (
+          <div
+            className="table-grid table-grid--map"
+            style={{
+              gridTemplateRows: `repeat(${mapGrid.rows}, 1fr)`,
+              gridTemplateColumns: `repeat(${mapGrid.cols}, 1fr)`,
+            }}
+          >
+            {tables.map((table) => {
+              const row = (table.position?.row ?? 0) + 1;
+              const col = (table.position?.col ?? 0) + 1;
+              return (
+                <div key={table.id} style={{ gridRow: row, gridColumn: col }}>
+                  {renderTableCard(table)}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="table-grid">
+            {tables.map((table) => renderTableCard(table))}
+          </div>
+        )}
+      </div>
+
+      {selectedTable && (
+        <TableActionModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedTable(null);
+          }}
+          tableId={selectedTable.id}
+          tableName={selectedTable.name}
+          tableStatus={selectedTable.status}
+          pricePerHour={selectedTable.pricePerHour}
+          sessionId={selectedTable.sessionId}
+          elapsedTime={activeTables[selectedTable.id]?.elapsed}
+          billAmount={activeTables[selectedTable.id]?.bill}
+          onTableUpdate={() => {
+            setIsModalOpen(false);
+            setSelectedTable(null);
+            onTableUpdate?.();
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+export default TableGrid;
