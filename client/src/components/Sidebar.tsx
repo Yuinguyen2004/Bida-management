@@ -12,6 +12,7 @@ import {
   BarChart3,
   User,
   Bell,
+  Users,
 } from 'lucide-react';
 import { getNavigationItems, type AppPage, type UserRole } from '../utils/navigation';
 import '../styles/sidebar.css';
@@ -35,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'table-management': Layers,
     'fb-management': UtensilsCrossed,
     'revenue-reports': BarChart3,
+    customers: Users,
     'staff-tables': Layers,
     'staff-menu': UtensilsCrossed,
     'my-profile': User,

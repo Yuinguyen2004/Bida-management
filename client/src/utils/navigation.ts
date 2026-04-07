@@ -7,6 +7,7 @@ export type AppPage =
   | 'table-management'
   | 'fb-management'
   | 'revenue-reports'
+  | 'customers'
   | 'staff-tables'
   | 'staff-menu'
   | 'my-profile'
@@ -22,12 +23,14 @@ const navigationByRole: Record<UserRole, NavigationItem[]> = {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'table-management', label: 'Table Management' },
     { id: 'fb-management', label: 'F&B Management' },
+    { id: 'customers', label: 'Customer CRM' },
     { id: 'revenue-reports', label: 'Revenue Reports' },
   ],
   staff: [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'staff-tables', label: 'Table Service' },
     { id: 'staff-menu', label: 'Service Menu' },
+    { id: 'customers', label: 'Customer CRM' },
   ],
 };
 

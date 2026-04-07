@@ -8,6 +8,7 @@ import TableManagement from './pages/TableManagement'
 import RevenueAnalytics from './pages/RevenueAnalytics'
 import StaffMenu from './pages/StaffMenu'
 import StaffTableOperations from './pages/StaffTableOperations'
+import CustomerManagement from './pages/CustomerManagement'
 import MyProfile from './pages/MyProfile'
 import Notifications from './pages/Notifications'
 import { getDefaultPageForRole, isPageAllowedForRole, type AppPage } from './utils/navigation'
@@ -84,6 +85,9 @@ function App() {
       )}
       {currentPage === 'staff-menu' && (
         <StaffMenu onLogout={handleLogout} onNavigate={handleNavigate} user={user} />
+      )}
+      {currentPage === 'customers' && (
+        <CustomerManagement onLogout={handleLogout} onNavigate={handleNavigate} user={user} />
       )}
       {currentPage === 'my-profile' && (
         <MyProfile onLogout={handleLogout} onNavigate={handleNavigate} user={user} />
