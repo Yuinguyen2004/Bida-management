@@ -1,7 +1,9 @@
 const TableRepository = require('../repositories/TableRepository');
+const SessionRepository = require('../repositories/SessionRepository');
 const ApiError = require('../utils/apiError');
 
 const tableRepository = new TableRepository();
+const sessionRepository = new SessionRepository();
 const TABLE_TYPE_ALIASES = {
   snooker: 'lo',
   'ping-pong': 'carom',
@@ -63,6 +65,23 @@ const createTable = async ({ tableNumber, name, type, pricePerHour, position }) 
 };
 
 const updateTable = async (id, updateData) => {
+  const existingTable = await tableRepository.findById(id);
+  if (!existingTable) {
+    throw new ApiError(404, 'Table not found');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updateData, 'status')) {
+    const activeSession = await sessionRepository.findActiveByTableId(id);
+
+    if (!activeSession && updateData.status === 'playing') {
+      throw new ApiError(400, 'Khong the chuyen ban sang playing thu cong');
+    }
+
+    if (activeSession && updateData.status !== 'playing') {
+      throw new ApiError(400, 'Khong the doi trang thai ban khi phien choi chua ket thuc');
+    }
+  }
+
   const normalizedUpdateData = {
     ...updateData,
     type: normalizeTableType(updateData.type),
@@ -73,13 +92,15 @@ const updateTable = async (id, updateData) => {
   }
 
   const table = await tableRepository.update(id, normalizedUpdateData);
-  if (!table) {
-    throw new ApiError(404, 'Table not found');
-  }
   return serializeTable(table);
 };
 
 const deleteTable = async (id) => {
+  const hasSessionHistory = await sessionRepository.existsByTableId(id);
+  if (hasSessionHistory) {
+    throw new ApiError(400, 'Khong the xoa ban da co lich su phien choi');
+  }
+
   const table = await tableRepository.delete(id);
   if (!table) {
     throw new ApiError(404, 'Table not found');

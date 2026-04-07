@@ -16,6 +16,13 @@ const errorHandler = (err, req, res, next) => {
     return res.status(400).json({ success: false, message });
   }
 
+  if (err.name === 'CastError') {
+    return res.status(400).json({
+      success: false,
+      message: `${err.path || 'id'} khong hop le`,
+    });
+  }
+
   // Mongoose duplicate key
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue).join(', ');

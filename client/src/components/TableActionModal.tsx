@@ -3,6 +3,7 @@ import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { sessionService } from '../services/sessionService';
 import { orderService } from '../services/orderService';
 import { fnbService, type FnbItem } from '../services/fnbService';
+import { customerService, type Customer } from '../services/customerService';
 import { formatCurrency } from '../utils/formatCurrency';
 import '../styles/table-action-modal.css';
 
@@ -43,11 +44,18 @@ export const TableActionModal: React.FC<TableActionModalProps> = ({
   const [showFBModal, setShowFBModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [searchingCustomer, setSearchingCustomer] = useState(false);
   const [checkoutResult, setCheckoutResult] = useState<{
     duration: number;
     totalTableCost: number;
     totalFnbCost: number;
+    discountPercent: number;
+    discountAmount: number;
     totalAmount: number;
+    customerName?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -72,11 +80,32 @@ export const TableActionModal: React.FC<TableActionModalProps> = ({
     }
   };
 
+  const handleCustomerSearch = async (query: string) => {
+    setCustomerSearch(query);
+    if (query.length < 2) {
+      setCustomerResults([]);
+      return;
+    }
+    setSearchingCustomer(true);
+    try {
+      const all = await customerService.getAll();
+      const filtered = all.filter(c =>
+        c.name.toLowerCase().includes(query.toLowerCase()) ||
+        c.phone.includes(query)
+      );
+      setCustomerResults(filtered.slice(0, 5));
+    } catch {
+      setCustomerResults([]);
+    } finally {
+      setSearchingCustomer(false);
+    }
+  };
+
   const handleStartSession = async () => {
     setLoading(true);
     setError('');
     try {
-      await sessionService.start(tableId);
+      await sessionService.start(tableId, selectedCustomer?._id);
       onTableUpdate?.();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to start session');
@@ -95,7 +124,10 @@ export const TableActionModal: React.FC<TableActionModalProps> = ({
         duration: result.duration || 0,
         totalTableCost: result.totalTableCost || 0,
         totalFnbCost: result.totalFnbCost || 0,
+        discountPercent: result.discountPercent || 0,
+        discountAmount: result.discountAmount || 0,
         totalAmount: result.totalAmount || 0,
+        customerName: typeof result.customerId === 'object' && result.customerId ? result.customerId.name : undefined,
       });
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to end session');
@@ -150,6 +182,9 @@ export const TableActionModal: React.FC<TableActionModalProps> = ({
     setCheckoutResult(null);
     setExistingOrders([]);
     setCurrentOrder([]);
+    setSelectedCustomer(null);
+    setCustomerSearch('');
+    setCustomerResults([]);
     onTableUpdate?.();
   };
 
@@ -186,6 +221,12 @@ export const TableActionModal: React.FC<TableActionModalProps> = ({
               <span>F&B Cost</span>
               <span>{formatCurrency(checkoutResult.totalFnbCost)}</span>
             </div>
+            {checkoutResult.discountPercent > 0 && (
+              <div className="summary-row discount">
+                <span>Discount ({checkoutResult.customerName} - {checkoutResult.discountPercent}%)</span>
+                <span>-{formatCurrency(checkoutResult.discountAmount)}</span>
+              </div>
+            )}
             <div className="summary-row total">
               <span>Total Amount</span>
               <span>{formatCurrency(checkoutResult.totalAmount)}</span>
@@ -307,13 +348,58 @@ export const TableActionModal: React.FC<TableActionModalProps> = ({
 
         <div className="modal-actions">
           {tableStatus === 'available' && (
-            <button
-              className="table-modal-action-btn table-modal-action-btn--primary"
-              onClick={handleStartSession}
-              disabled={loading}
-            >
-              {loading ? 'Starting...' : 'Start Session'}
-            </button>
+            <>
+              <div className="customer-picker">
+                <h3>Attach Customer (Optional)</h3>
+                {selectedCustomer ? (
+                  <div className="selected-customer">
+                    <div className="customer-info">
+                      <span className="customer-name">{selectedCustomer.name}</span>
+                      <span className="customer-detail">{selectedCustomer.phone} - {selectedCustomer.membershipTier}</span>
+                    </div>
+                    <button className="customer-remove-btn" onClick={() => setSelectedCustomer(null)}>
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="customer-search">
+                    <input
+                      type="text"
+                      placeholder="Search by name or phone..."
+                      value={customerSearch}
+                      onChange={(e) => handleCustomerSearch(e.target.value)}
+                      className="customer-search-input"
+                    />
+                    {searchingCustomer && <div className="customer-searching">Searching...</div>}
+                    {customerResults.length > 0 && (
+                      <div className="customer-results">
+                        {customerResults.map(c => (
+                          <button
+                            key={c._id}
+                            className="customer-result-item"
+                            onClick={() => {
+                              setSelectedCustomer(c);
+                              setCustomerSearch('');
+                              setCustomerResults([]);
+                            }}
+                          >
+                            <span className="customer-name">{c.name}</span>
+                            <span className="customer-detail">{c.phone} - {c.membershipTier}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                className="table-modal-action-btn table-modal-action-btn--primary"
+                onClick={handleStartSession}
+                disabled={loading}
+              >
+                {loading ? 'Starting...' : 'Start Session'}
+              </button>
+            </>
           )}
 
           {tableStatus === 'playing' && (

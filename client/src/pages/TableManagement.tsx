@@ -73,6 +73,8 @@ export const TableManagement: React.FC<TableManagementProps> = ({
       return;
     }
     try {
+      const editingTable = tables.find((table) => table._id === editingId);
+      const isPlayingTable = editingTable?.status === 'playing';
       const positionPayload = {
         row: editData.position?.row ?? 0,
         col: editData.position?.col ?? 0,
@@ -89,13 +91,20 @@ export const TableManagement: React.FC<TableManagementProps> = ({
         setIsAdding(false);
         toastService.success('Table created successfully');
       } else {
-        await tableService.update(editingId, {
+        const updatePayload: Partial<Table> = {
           tableNumber: editData.tableNumber,
           name: editData.name,
           type: editData.type,
           pricePerHour: editData.pricePerHour,
-          status: editData.status,
           position: positionPayload,
+        };
+
+        if (!isPlayingTable) {
+          updatePayload.status = editData.status;
+        }
+
+        await tableService.update(editingId, {
+          ...updatePayload,
         });
         toastService.success('Table updated successfully');
       }
@@ -110,6 +119,14 @@ export const TableManagement: React.FC<TableManagementProps> = ({
   };
 
   const handleDelete = async (id: string) => {
+    const table = tables.find((item) => item._id === id);
+    if (table?.status === 'playing') {
+      const message = 'Complete the active session before deleting this table';
+      setError(message);
+      toastService.error(message);
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this table?')) return;
     try {
       await tableService.delete(id);
@@ -284,14 +301,21 @@ export const TableManagement: React.FC<TableManagementProps> = ({
                         />
                       </div>
                       <div className="cell">
-                        <select
-                          value={editData.status || 'available'}
-                          onChange={(e) => setEditData({ ...editData, status: e.target.value as Table['status'] })}
-                          className="edit-input"
-                        >
-                          <option value="available">Available</option>
-                          <option value="maintenance">Maintenance</option>
-                        </select>
+                        {table.status === 'playing' ? (
+                          <div>
+                            <span className="status-badge status-playing">In Use</span>
+                            <div className="cell-subtext">Status locks until checkout</div>
+                          </div>
+                        ) : (
+                          <select
+                            value={editData.status || 'available'}
+                            onChange={(e) => setEditData({ ...editData, status: e.target.value as Table['status'] })}
+                            className="edit-input"
+                          >
+                            <option value="available">Available</option>
+                            <option value="maintenance">Maintenance</option>
+                          </select>
+                        )}
                       </div>
                       <div className="cell actions">
                         <button className="action-save" onClick={handleSave}>Save</button>
@@ -333,8 +357,9 @@ export const TableManagement: React.FC<TableManagementProps> = ({
                         </button>
                         <button
                           className="action-btn delete"
-                          title="Delete"
+                          title={table.status === 'playing' ? 'Complete session before deleting' : 'Delete'}
                           onClick={() => handleDelete(table._id)}
+                          disabled={table.status === 'playing'}
                         >
                           <Trash2 size={16} />
                         </button>

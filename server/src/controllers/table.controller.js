@@ -1,7 +1,7 @@
 const tableService = require('../services/table.service');
 const { getIO } = require('../config/socket');
 const ApiError = require('../utils/apiError');
-const mongoose = require('mongoose');
+const validateObjectId = require('../utils/validateObjectId');
 
 const TABLE_TYPES = ['lo', 'carom', 'pool', 'snooker', 'ping-pong'];
 const TABLE_STATUSES = ['available', 'playing', 'maintenance'];
@@ -82,12 +82,6 @@ const parsePosition = (value) => {
   }
 
   return position;
-};
-
-const validateObjectId = (id, fieldName = 'id') => {
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new ApiError(400, `${fieldName} khong hop le`);
-  }
 };
 
 const buildCreateTablePayload = (body) => {

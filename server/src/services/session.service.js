@@ -1,14 +1,25 @@
 const SessionRepository = require('../repositories/SessionRepository');
 const TableRepository = require('../repositories/TableRepository');
 const OrderItemRepository = require('../repositories/OrderItemRepository');
+const CustomerRepository = require('../repositories/CustomerRepository');
 const ApiError = require('../utils/apiError');
 const { getIO } = require('../config/socket');
 
 const sessionRepository = new SessionRepository();
 const tableRepository = new TableRepository();
 const orderItemRepository = new OrderItemRepository();
+const customerRepository = new CustomerRepository();
 
-const startSession = async (tableId, staffId) => {
+const getTierDiscount = (tier) => {
+  switch (tier) {
+    case 'platinum': return 15;
+    case 'gold': return 10;
+    case 'silver': return 5;
+    default: return 0;
+  }
+};
+
+const startSession = async (tableId, staffId, customerId) => {
   const table = await tableRepository.findById(tableId);
   if (!table) {
     throw new ApiError(404, 'Ban khong ton tai');
@@ -17,9 +28,17 @@ const startSession = async (tableId, staffId) => {
     throw new ApiError(400, 'Ban dang duoc su dung hoac bao tri');
   }
 
+  if (customerId) {
+    const customer = await customerRepository.findById(customerId);
+    if (!customer) {
+      throw new ApiError(404, 'Customer not found');
+    }
+  }
+
   const session = await sessionRepository.create({
     tableId,
     staffId,
+    customerId: customerId || null,
     startTime: new Date(),
     status: 'active',
   });
@@ -67,12 +86,27 @@ const endSession = async (sessionId) => {
 
   const totalAmount = totalTableCost + totalFnbCost;
 
+  let discountPercent = 0;
+  let discountAmount = 0;
+  let finalAmount = totalAmount;
+
+  if (session.customerId) {
+    discountPercent = getTierDiscount(session.customerId.membershipTier);
+    discountAmount = Math.round(totalAmount * discountPercent / 100);
+    finalAmount = totalAmount - discountAmount;
+    await customerRepository.update(session.customerId._id, {
+      visitCount: session.customerId.visitCount + 1,
+    });
+  }
+
   const updatedSession = await sessionRepository.update(sessionId, {
     endTime,
     duration: durationMinutes,
     totalTableCost,
     totalFnbCost,
-    totalAmount,
+    totalAmount: finalAmount,
+    discountPercent,
+    discountAmount,
     status: 'completed',
   });
 
@@ -94,6 +128,8 @@ const endSession = async (sessionId) => {
     duration: updatedSession.duration,
     totalTableCost: updatedSession.totalTableCost,
     totalFnbCost: updatedSession.totalFnbCost,
+    discountPercent: updatedSession.discountPercent,
+    discountAmount: updatedSession.discountAmount,
     totalAmount: updatedSession.totalAmount,
     endedAt: updatedSession.endTime,
   });

@@ -1,17 +1,24 @@
 const sessionService = require('../services/session.service');
+const validateObjectId = require('../utils/validateObjectId');
 
 exports.startSession = async (req, res) => {
-  const { tableId } = req.body;
-  const session = await sessionService.startSession(tableId, req.user._id);
+  const { tableId, customerId } = req.body;
+  validateObjectId(tableId, 'tableId');
+  if (customerId) {
+    validateObjectId(customerId, 'customerId');
+  }
+  const session = await sessionService.startSession(tableId, req.user._id, customerId);
   res.status(201).json({ success: true, data: session });
 };
 
 exports.endSession = async (req, res) => {
+  validateObjectId(req.params.id);
   const session = await sessionService.endSession(req.params.id);
   res.json({ success: true, data: session });
 };
 
 exports.getSessionById = async (req, res) => {
+  validateObjectId(req.params.id);
   const data = await sessionService.getSessionById(req.params.id);
   res.json({ success: true, data });
 };
