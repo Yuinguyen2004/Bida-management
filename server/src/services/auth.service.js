@@ -14,13 +14,13 @@ const generateTokens = (userId) => {
   return { accessToken, refreshToken };
 };
 
-const register = async ({ username, password, fullName, role }) => {
+const register = async ({ username, password, fullName, role, email }) => {
   const existing = await userRepository.findByUsername(username);
   if (existing) {
     throw new ApiError(400, 'Username da ton tai');
   }
 
-  const user = await userRepository.create({ username, password, fullName, role });
+  const user = await userRepository.create({ username, password, fullName, role, email });
   const tokens = generateTokens(user._id);
 
   const userObj = user.toObject();
@@ -30,7 +30,10 @@ const register = async ({ username, password, fullName, role }) => {
 };
 
 const login = async ({ username, password }) => {
-  const user = await userRepository.findByUsername(username);
+  const isEmail = username.includes('@');
+  const user = isEmail
+    ? await userRepository.findByEmail(username)
+    : await userRepository.findByUsername(username);
   if (!user) {
     throw new ApiError(401, 'Username hoac password khong dung');
   }

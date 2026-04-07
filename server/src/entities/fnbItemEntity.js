@@ -8,7 +8,8 @@ const fnbItemSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['nuoc', 'bia', 'snack'],
+      lowercase: true,
+      trim: true,
       required: true,
     },
     price: {

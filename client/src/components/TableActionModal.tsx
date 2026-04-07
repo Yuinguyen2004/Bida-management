@@ -1,0 +1,514 @@
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { sessionService } from '../services/sessionService';
+import { orderService } from '../services/orderService';
+import { fnbService, type FnbItem } from '../services/fnbService';
+import { customerService, type Customer } from '../services/customerService';
+import { formatCurrency } from '../utils/formatCurrency';
+import '../styles/table-action-modal.css';
+
+interface LocalOrderItem {
+  fnbItemId: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+interface TableActionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  tableId: string;
+  tableName: string;
+  tableStatus: string;
+  pricePerHour: number;
+  sessionId?: string;
+  elapsedTime?: string;
+  billAmount?: number;
+  onTableUpdate?: () => void;
+}
+
+export const TableActionModal: React.FC<TableActionModalProps> = ({
+  isOpen,
+  onClose,
+  tableId,
+  tableName,
+  tableStatus,
+  pricePerHour,
+  sessionId,
+  elapsedTime,
+  billAmount,
+  onTableUpdate,
+}) => {
+  const [currentOrder, setCurrentOrder] = useState<LocalOrderItem[]>([]);
+  const [existingOrders, setExistingOrders] = useState<LocalOrderItem[]>([]);
+  const [showFBModal, setShowFBModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [searchingCustomer, setSearchingCustomer] = useState(false);
+  const [checkoutResult, setCheckoutResult] = useState<{
+    duration: number;
+    totalTableCost: number;
+    totalFnbCost: number;
+    discountPercent: number;
+    discountAmount: number;
+    totalAmount: number;
+    customerName?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (isOpen && sessionId && tableStatus === 'playing') {
+      loadExistingOrders();
+    }
+  }, [isOpen, sessionId, tableStatus]);
+
+  const loadExistingOrders = async () => {
+    if (!sessionId) return;
+    try {
+      const orders = await orderService.getBySession(sessionId);
+      const mapped: LocalOrderItem[] = orders.map(o => ({
+        fnbItemId: typeof o.fnbItemId === 'object' ? o.fnbItemId._id : o.fnbItemId,
+        name: typeof o.fnbItemId === 'object' ? o.fnbItemId.name : 'Item',
+        price: o.price / o.quantity,
+        quantity: o.quantity,
+      }));
+      setExistingOrders(mapped);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+    }
+  };
+
+  const handleCustomerSearch = async (query: string) => {
+    setCustomerSearch(query);
+    if (query.length < 2) {
+      setCustomerResults([]);
+      return;
+    }
+    setSearchingCustomer(true);
+    try {
+      const all = await customerService.getAll();
+      const filtered = all.filter(c =>
+        c.name.toLowerCase().includes(query.toLowerCase()) ||
+        c.phone.includes(query)
+      );
+      setCustomerResults(filtered.slice(0, 5));
+    } catch {
+      setCustomerResults([]);
+    } finally {
+      setSearchingCustomer(false);
+    }
+  };
+
+  const handleStartSession = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await sessionService.start(tableId, selectedCustomer?._id);
+      onTableUpdate?.();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to start session');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (!sessionId) return;
+    setLoading(true);
+    setError('');
+    try {
+      const result = await sessionService.end(sessionId);
+      setCheckoutResult({
+        duration: result.duration || 0,
+        totalTableCost: result.totalTableCost || 0,
+        totalFnbCost: result.totalFnbCost || 0,
+        discountPercent: result.discountPercent || 0,
+        discountAmount: result.discountAmount || 0,
+        totalAmount: result.totalAmount || 0,
+        customerName: typeof result.customerId === 'object' && result.customerId ? result.customerId.name : undefined,
+      });
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to end session');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddFnbItem = (item: LocalOrderItem) => {
+    const existing = currentOrder.find(o => o.fnbItemId === item.fnbItemId);
+    if (existing) {
+      setCurrentOrder(
+        currentOrder.map(o =>
+          o.fnbItemId === item.fnbItemId ? { ...o, quantity: o.quantity + 1 } : o
+        )
+      );
+    } else {
+      setCurrentOrder([...currentOrder, { ...item, quantity: 1 }]);
+    }
+  };
+
+  const handleQuantityChange = (fnbItemId: string, newQty: number) => {
+    if (newQty <= 0) {
+      setCurrentOrder(currentOrder.filter(o => o.fnbItemId !== fnbItemId));
+    } else {
+      setCurrentOrder(
+        currentOrder.map(o =>
+          o.fnbItemId === fnbItemId ? { ...o, quantity: newQty } : o
+        )
+      );
+    }
+  };
+
+  const handleSubmitOrder = async () => {
+    if (!sessionId || currentOrder.length === 0) return;
+    setLoading(true);
+    setError('');
+    try {
+      for (const item of currentOrder) {
+        await orderService.create(sessionId, item.fnbItemId, item.quantity);
+      }
+      setCurrentOrder([]);
+      await loadExistingOrders();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to submit order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseReceipt = () => {
+    setCheckoutResult(null);
+    setExistingOrders([]);
+    setCurrentOrder([]);
+    setSelectedCustomer(null);
+    setCustomerSearch('');
+    setCustomerResults([]);
+    onTableUpdate?.();
+  };
+
+  const newOrderTotal = currentOrder.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const existingOrderTotal = existingOrders.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalBill = (billAmount || 0) + existingOrderTotal + newOrderTotal;
+
+  if (!isOpen) return null;
+
+  if (checkoutResult) {
+    return (
+      <div className="modal-overlay" onClick={handleCloseReceipt}>
+        <div className="table-action-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <div>
+              <h2>{tableName} - Receipt</h2>
+              <p className="table-status-info">Session Complete</p>
+            </div>
+            <button className="modal-close-btn" onClick={handleCloseReceipt}>
+              <X size={24} />
+            </button>
+          </div>
+
+          <div className="bill-summary">
+            <div className="summary-row">
+              <span>Duration</span>
+              <span>{checkoutResult.duration} minutes</span>
+            </div>
+            <div className="summary-row">
+              <span>Table Cost</span>
+              <span>{formatCurrency(checkoutResult.totalTableCost)}</span>
+            </div>
+            <div className="summary-row">
+              <span>F&B Cost</span>
+              <span>{formatCurrency(checkoutResult.totalFnbCost)}</span>
+            </div>
+            {checkoutResult.discountPercent > 0 && (
+              <div className="summary-row discount">
+                <span>Discount ({checkoutResult.customerName} - {checkoutResult.discountPercent}%)</span>
+                <span>-{formatCurrency(checkoutResult.discountAmount)}</span>
+              </div>
+            )}
+            <div className="summary-row total">
+              <span>Total Amount</span>
+              <span>{formatCurrency(checkoutResult.totalAmount)}</span>
+            </div>
+          </div>
+
+          <div className="modal-actions">
+            <button className="table-modal-action-btn table-modal-action-btn--primary" onClick={handleCloseReceipt}>
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="table-action-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <h2>{tableName}</h2>
+            <p className="table-status-info">Status: {tableStatus} | {formatCurrency(pricePerHour)}/h</p>
+          </div>
+          <button className="modal-close-btn" onClick={onClose}>
+            <X size={24} />
+          </button>
+        </div>
+
+        {error && (
+          <div style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '12px', borderRadius: '8px', margin: '0 0 16px' }}>
+            {error}
+          </div>
+        )}
+
+        {tableStatus === 'playing' && (
+          <div className="table-info-section">
+            <div className="info-item">
+              <span className="info-label">Time Elapsed</span>
+              <span className="info-value">{elapsedTime || '0m'}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Table Cost (est.)</span>
+              <span className="info-value">{formatCurrency(billAmount || 0)}</span>
+            </div>
+          </div>
+        )}
+
+        {existingOrders.length > 0 && (
+          <div className="order-section">
+            <h3>Ordered Items</h3>
+            <div className="order-items">
+              {existingOrders.map((item, idx) => (
+                <div key={idx} className="order-item">
+                  <div className="item-details">
+                    <div className="item-name">{item.name}</div>
+                    <div className="item-price">{formatCurrency(item.price)}</div>
+                  </div>
+                  <div className="item-quantity-control">
+                    <span className="qty-value">x{item.quantity}</span>
+                  </div>
+                  <div className="item-total">{formatCurrency(item.price * item.quantity)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {currentOrder.length > 0 && (
+          <div className="order-section">
+            <h3>New Order</h3>
+            <div className="order-items">
+              {currentOrder.map(item => (
+                <div key={item.fnbItemId} className="order-item">
+                  <div className="item-details">
+                    <div className="item-name">{item.name}</div>
+                    <div className="item-price">{formatCurrency(item.price)}</div>
+                  </div>
+                  <div className="item-quantity-control">
+                    <button className="qty-btn" onClick={() => handleQuantityChange(item.fnbItemId, item.quantity - 1)}>
+                      <Minus size={16} />
+                    </button>
+                    <span className="qty-value">{item.quantity}</span>
+                    <button className="qty-btn" onClick={() => handleQuantityChange(item.fnbItemId, item.quantity + 1)}>
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  <div className="item-total">{formatCurrency(item.price * item.quantity)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tableStatus === 'playing' && (
+          <div className="bill-summary">
+            <div className="summary-row">
+              <span>Table Cost (est.)</span>
+              <span>{formatCurrency(billAmount || 0)}</span>
+            </div>
+            {existingOrderTotal > 0 && (
+              <div className="summary-row">
+                <span>Existing F&B</span>
+                <span>{formatCurrency(existingOrderTotal)}</span>
+              </div>
+            )}
+            {newOrderTotal > 0 && (
+              <div className="summary-row">
+                <span>New F&B</span>
+                <span>{formatCurrency(newOrderTotal)}</span>
+              </div>
+            )}
+            <div className="summary-row total">
+              <span>Estimated Total</span>
+              <span>{formatCurrency(totalBill)}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="modal-actions">
+          {tableStatus === 'available' && (
+            <>
+              <div className="customer-picker">
+                <h3>Attach Customer (Optional)</h3>
+                {selectedCustomer ? (
+                  <div className="selected-customer">
+                    <div className="customer-info">
+                      <span className="customer-name">{selectedCustomer.name}</span>
+                      <span className="customer-detail">{selectedCustomer.phone} - {selectedCustomer.membershipTier}</span>
+                    </div>
+                    <button className="customer-remove-btn" onClick={() => setSelectedCustomer(null)}>
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="customer-search">
+                    <input
+                      type="text"
+                      placeholder="Search by name or phone..."
+                      value={customerSearch}
+                      onChange={(e) => handleCustomerSearch(e.target.value)}
+                      className="customer-search-input"
+                    />
+                    {searchingCustomer && <div className="customer-searching">Searching...</div>}
+                    {customerResults.length > 0 && (
+                      <div className="customer-results">
+                        {customerResults.map(c => (
+                          <button
+                            key={c._id}
+                            className="customer-result-item"
+                            onClick={() => {
+                              setSelectedCustomer(c);
+                              setCustomerSearch('');
+                              setCustomerResults([]);
+                            }}
+                          >
+                            <span className="customer-name">{c.name}</span>
+                            <span className="customer-detail">{c.phone} - {c.membershipTier}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                className="table-modal-action-btn table-modal-action-btn--primary"
+                onClick={handleStartSession}
+                disabled={loading}
+              >
+                {loading ? 'Starting...' : 'Start Session'}
+              </button>
+            </>
+          )}
+
+          {tableStatus === 'playing' && (
+            <>
+              <button
+                className="table-modal-action-btn table-modal-action-btn--secondary"
+                onClick={() => setShowFBModal(true)}
+              >
+                <ShoppingCart size={18} />
+                Add F&B
+              </button>
+              {currentOrder.length > 0 && (
+                <button
+                  className="table-modal-action-btn table-modal-action-btn--secondary"
+                  onClick={handleSubmitOrder}
+                  disabled={loading}
+                >
+                  {loading ? 'Submitting...' : 'Submit Order'}
+                </button>
+              )}
+              <button
+                className="table-modal-action-btn table-modal-action-btn--primary"
+                onClick={handleEndSession}
+                disabled={loading}
+              >
+                {loading ? 'Closing...' : 'Complete & Checkout'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {showFBModal && (
+        <FBMenuModal
+          isOpen={showFBModal}
+          onClose={() => setShowFBModal(false)}
+          onSelectItem={handleAddFnbItem}
+        />
+      )}
+    </div>
+  );
+};
+
+interface FBMenuModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectItem: (item: LocalOrderItem) => void;
+}
+
+const FBMenuModal: React.FC<FBMenuModalProps> = ({ isOpen, onClose, onSelectItem }) => {
+  const [menuItems, setMenuItems] = useState<FnbItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+      fnbService.getAll()
+        .then(items => setMenuItems(items.filter(i => i.isAvailable)))
+        .catch(err => console.error('Failed to load menu:', err))
+        .finally(() => setLoading(false));
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="fb-menu-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Order Food & Beverages</h2>
+          <button className="modal-close-btn" onClick={onClose}>
+            <X size={24} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>Loading menu...</div>
+        ) : (
+          <div className="menu-grid">
+            {menuItems.map(item => (
+              <button
+                key={item._id}
+                className="menu-item"
+                onClick={() => {
+                  onSelectItem({
+                    fnbItemId: item._id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: 1,
+                  });
+                }}
+              >
+                <div className="item-info">
+                  <div className="item-name">{item.name}</div>
+                  <div className="item-price">{formatCurrency(item.price)}</div>
+                </div>
+                <div className="item-add-btn">+</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="modal-footer">
+          <button className="close-menu-btn" onClick={onClose}>
+            Close Menu
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TableActionModal;

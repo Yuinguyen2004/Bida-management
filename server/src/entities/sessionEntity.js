@@ -12,6 +12,21 @@ const sessionSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Customer',
+      default: null,
+    },
+    discountPercent: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     startTime: {
       type: Date,
       required: true,
